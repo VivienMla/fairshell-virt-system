@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Windows environment
+GenericName=Windows environment
+Comment=Windows environment
+Exec=/usr/share/fairshell/virt-system/fairshell-VM.py win10
+Icon=/usr/share/fairshell/virt-system/icons/win10.png
+Terminal=false
+Type=Application

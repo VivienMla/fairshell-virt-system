@@ -1,0 +1,86 @@
+{
+    "WIN10": {
+        "vm-imagefile": "/path/to/Windows.img",
+        "os-variant": "win10",
+        "descr": "Windows VM",
+        "shared-dir": "Documents",
+        "usb-redir": "mass-storage",
+        "display": "fullscreen",
+        "writable": false,
+        "hardware": {
+            "mem": 3072,
+            "cpu": 2,
+            "mac-addr": null
+        },
+        "allowed-users": ["@libvirt"],
+        "resolved-names": [
+            "globalsign.com",
+            "digicert.com",
+            "thawte.com",
+            "amazontrust.com"
+        ],
+        "allowed-networks": []
+    },
+    "WIN10-upd": {
+        "vm-imagefile": "/path/to/Windows.img",
+        "os-variant": "win10",
+        "descr": "Windows VM update",
+        "shared-dir": "VM-update",
+        "usb-redir": "mass-storage",
+        "display": null,
+        "writable": true,
+        "hardware": {
+            "mem": 6192,
+            "cpu": 2,
+            "mac-addr": null
+        },
+        "allowed-users": ["root"],
+        "resolved-names": [""],
+        "allowed-networks": []
+    },
+    "linux": {
+        "vm-imagefile": "/path/to/vm-debian11.img",
+        "os-variant": "debian9",
+        "descr": "Debian 11 VM",
+        "shared-dir": "Documents",
+        "usb-redir": "mass-storage",
+        "display": "window",
+        "writable": false,
+        "hardware": {
+            "mem": 3072,
+            "cpu": 1,
+            "mac-addr": null
+        },
+        "allowed-users": [""],
+        "resolved-names": [
+            "globalsign.com",
+            "digicert.com",
+            "thawte.com",
+            "amazontrust.com"
+        ],
+        "allowed-networks": []
+    },
+    "linux-upd": {
+        "vm-imagefile": "/path/to/vm-debian11.img",
+        "os-variant": "debian9",
+        "descr": "Debian 11 VM",
+        "shared-dir": "VM-update",
+        "usb-redir": "mass-storage",
+        "display": "window",
+        "writable": true,
+        "hardware": {
+            "mem": 3072,
+            "cpu": 1,
+            "mac-addr": null
+        },
+        "allowed-users": ["root"],
+        "resolved-names": [
+            "globalsign.com",
+            "digicert.com",
+            "thawte.com",
+            "amazontrust.com",
+            "debian.org"
+        ],
+        "allowed-networks": []
+    }
+}

@@ -1,0 +1,56 @@
+Name:           fairshell-@appname@
+Version:        @version@
+Release:        1%{?dist}
+Summary:        Integrated VM
+Group:		Miscellaneous
+
+License:        GPLv3+
+URL:            https://www.fairhell.org
+Source0: 	tarball.tar.gz
+BuildArch: 	noarch
+
+Requires:       python3,python3-netaddr,python3-psutil,python3-libvirt,firejail,moby-engine,libvirt-daemon-config-network,libvirt-daemon-kvm,qemu-kvm,virt-install,python3-distro,spice-glib-devel,spice-gtk3-devel,python3-gobject,python3-pyxdg,usbutils
+
+%description
+Run a short-lived VM in the context of a user,
+ while sharing a single common Documents/ directory and filtering the
+ access the VM has to the network.
+
+%prep
+%autosetup
+
+
+%install
+rm -rf %{buildroot}
+%make_install
+#make install DESTDIR=$RPM_BUILD_ROOT
+
+%posttrans
+# NB: we can't yet load the Docker images because of SELinux policies
+# enable service
+systemctl enable fairshell-virt-system
+systemctl start fairshell-virt-system
+grubby --update-kernel=ALL --args="systemd.unified_cgroup_hierarchy=0"
+
+%preun
+# if any VM is running, kill it
+/usr/share/fairshell/virt-system/vm-tool.py discard-all
+# stop service
+systemctl stop fairshell-virt-system
+systemctl disable fairshell-virt-system
+# remove python cache, if any
+find /usr/share/fairshell/virt-system -name __pycache__ -type d -exec rm -rf '{}' ';'
+
+%files
+#%license add-license-file-here
+
+/etc/dbus-1/system.d/org.fairshell.VMManager.conf
+/etc/fairshell-virt-system.json
+/lib/systemd/system/fairshell-virt-system.service
+/usr/share/fairshell/@appname@/*
+
+%changelog
+* Sun Aug  9 2020 Vivien Malerba <vmalerba@gmail.com>
+- Initial release
+* Sat May 21 2022 Vivien Malerba <vmalerba@gmail.com>
+- Code cleanups and improvements

@@ -1,0 +1,9 @@
+fairshell-virt-system (1.0-1) stable; urgency=medium
+
+  * Initial release.
+
+ -- Vivien Malerba <vmalerba@gmail.com>  Mon, 27 Jul 2020 00:00:00 +0100
+
+  * Code cleanups and improvements
+
+-- Vivien Malerba <vmalerba@gmail.com>  Sat, 21 May 2022 00:00:00 +0100

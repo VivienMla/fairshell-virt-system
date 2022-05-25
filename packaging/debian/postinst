@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# -*- coding: utf-8 -*-
+#
+# Copyright 2020 - 2021 Vivien Malerba <vmalerba@gmail.com>
+#
+# This file is part of FAIRSHELL.
+#
+# FAIRSHELL is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# FAIRSHELL is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with FAIRSHELL.  If not, see <http://www.gnu.org/licenses/>.
+
+# load Docker images
+set +e
+for tarfile in /usr/share/fairshell/virt-system/docker-images/*.tar
+do
+    docker load -i "$tarfile"
+done
+
+# update security policy
+set -e
+/usr/share/fairshell/virt-system/update-security-policy.py
+
+# enable service
+systemctl enable fairshell-virt-system
+systemctl start fairshell-virt-system

@@ -1,0 +1,3165 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language french
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize a4paper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style swiss
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 2
+\paperpagestyle default
+\bullet 1 0 8 -1
+\bullet 2 0 9 -1
+\bullet 3 0 15 -1
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+FAIRSHELL virt system
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+FAIRSHELL virt system est un ensemble de composants permettant l'exécution
+ d'un système au sein d'une machine virtuelle tout en maîtrisant les flux
+ réseau (dont la résolution de noms) et le partage de répertoire.
+\end_layout
+
+\begin_layout Standard
+En particulier, la virtualisation d'un système Windows au sein d'un PC Linux
+ permet d'accéder aux programmes nécessitant Windows (typiquement Office)
+ sans pour autant être exposé aux risques inhérents à ce système, via l'utilisat
+ion d'une machine virtuelle (VM) Windows éphémère (
+\begin_inset Quotes cld
+\end_inset
+
+re-initialisée
+\begin_inset Quotes crd
+\end_inset
+
+ à chaque démarrage) contenant le minimum de fonctionnalités.
+\end_layout
+
+\begin_layout Standard
+Fonctionnellement, Windows est vu comme une application de l'environnement
+ Linux de l'utilisateur ayant déjà une session ouverte, où les applications
+ pré-installées peuvent être exécutées, et où seuls les fichiers présents
+ dans le répertoire 
+\family typewriter
+...
+\backslash
+Documents
+\family default
+ sont conservés après l'arrêt de la VM.
+\end_layout
+
+\begin_layout Standard
+Spécifiquement l'environnement Windows repose sur une image Windows installée
+ suivant la procédure décrite §
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "WindowsVM setup"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ où:
+\end_layout
+
+\begin_layout Itemize
+l'utilisateur au sein de l'environnement Windows n'a pas de privilèges d'adminis
+tration;
+\end_layout
+
+\begin_layout Itemize
+le répertoire 
+\family typewriter
+...
+\backslash
+Documents
+\family default
+ est mappé de manière transparente sur un montage réseau SMB dont le serveur
+ est implémenté sous forme de conteneur Docker;
+\end_layout
+
+\begin_layout Itemize
+le service DNS est rendu (via des manipulations avec netfilter) par un service
+ dédié implémenté, lui aussi, sous forme de conteneur Docker.
+\end_layout
+
+\begin_layout Itemize
+la gestion des licences (Windows, etc) est laissée à la charge de l'exploitant
+ (n'est pas traitée par FAIRSHELL).
+\end_layout
+
+\begin_layout Section
+Architecture
+\end_layout
+
+\begin_layout Standard
+Les composants mis en œuvre sont les suivants:
+\end_layout
+
+\begin_layout Itemize
+une VM (reposant sur libvirt);
+\end_layout
+
+\begin_layout Itemize
+un serveur SMB pour partager les fichiers avec la VM;
+\end_layout
+
+\begin_layout Itemize
+un serveur DNS pour brider la résolution de noms pour la VM.
+\end_layout
+
+\begin_layout Itemize
+un ordonnanceur exécuté sous forme de service systemd.
+\end_layout
+
+\begin_layout Subsection
+Architecture réseau interne
+\end_layout
+
+\begin_layout Standard
+L'architecture réseau interne autour de la VM repose sur les réseaux suivants:
+\end_layout
+
+\begin_layout Itemize
+un réseau 
+\begin_inset Quotes cld
+\end_inset
+
+virt-network
+\begin_inset Quotes crd
+\end_inset
+
+ mis en place via libvirt, qui lui permet de communiquer avec l'extérieur
+ du système hôte via du NAT et lui offre un service DHCP;
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Pour le mode VM BRIDGE, il faut 1 réseau NAT et un bridge sur la carte ETH0
+ => choisir la carte
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+en mode de VM 
+\begin_inset Quotes cld
+\end_inset
+
+BRIDGE
+\begin_inset Quotes crd
+\end_inset
+
+, un réseau supplémentaire de type 
+\begin_inset Quotes cld
+\end_inset
+
+bridge
+\begin_inset Quotes crd
+\end_inset
+
+ est associé à une carte réseau;
+\end_layout
+
+\begin_layout Itemize
+un réseau Docker (bridge) 
+\begin_inset Quotes cld
+\end_inset
+
+smb
+\begin_inset Quotes crd
+\end_inset
+
+ sur lequel se trouve le serveur SMB pour le partage de fichiers entre le
+ répertoire 
+\family typewriter
+~/Documents
+\family default
+ de la session Linux et le répertoire 
+\family typewriter
+...
+\backslash
+Documents
+\family default
+ de la session Windows;
+\end_layout
+
+\begin_layout Itemize
+un réseau Docker (bridge) 
+\begin_inset Quotes cld
+\end_inset
+
+dns
+\begin_inset Quotes crd
+\end_inset
+
+ sur lequel fonctionne un serveur DNS pour la résolution de noms.
+\end_layout
+
+\begin_layout Standard
+L'architecture en mode NAT est donc:
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Graphics
+	filename vm-network.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+En terme de flux:
+\end_layout
+
+\begin_layout Itemize
+toutes les requêtes DNS issues de la VM (quel que soit le serveur DNS requêté)
+ sont re-routées vers le serveur DNS (qui, suivant la validité des requêtes
+ interroge à son tour le resolver DNS configuré sur le système hôte), il
+ n'y a pas de communication directe entre la VM et des serveur DNS externes;
+\end_layout
+
+\begin_layout Itemize
+les flux réseaux vers des réseaux non explicitement autorisés sont bloqués;
+\end_layout
+
+\begin_layout Itemize
+aucune application fonctionnant sur le système hôte ne peut accéder au serveur
+ SMB.
+\end_layout
+
+\begin_layout Standard
+En synthèse, d'un point de vue flux réseau, l'architecture est la suivante:
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Graphics
+	filename vm-DNS.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Ainsi, on se prémunit:
+\end_layout
+
+\begin_layout Itemize
+des communications de télémétrie Microsoft pour garantir une meilleure confident
+ialité des données, des configurations et des usages;
+\end_layout
+
+\begin_layout Itemize
+des risques liés à utiliser Windows pour 
+\begin_inset Quotes cld
+\end_inset
+
+aller sur Internet
+\begin_inset Quotes crd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Configuration du système
+\begin_inset CommandInset label
+LatexCommand label
+name "WindowsVM config"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Ce composant est configuré via le fichier 
+\family typewriter
+/etc/fairshell-virt-system.json
+\family default
+ qui liste des configurations de VM indexées par un ID, dont le contenu
+ au format JSON est par ex.
+ (ici une seule configuration dont l'ID est 
+\begin_inset Quotes cld
+\end_inset
+
+system1
+\begin_inset Quotes crd
+\end_inset
+
+):
+\end_layout
+
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+{
+\end_layout
+
+\begin_layout Plain Layout
+
+   
+\begin_inset Quotes cld
+\end_inset
+
+system1
+\begin_inset Quotes crd
+\end_inset
+
+: {
+\end_layout
+
+\begin_layout Plain Layout
+
+	    "vm-imagefile": "/path/to/Windows.img",
+\end_layout
+
+\begin_layout Plain Layout
+
+        "descr": "Windows VM",
+\end_layout
+
+\begin_layout Plain Layout
+
+        "shared-dir": "Documents",
+\end_layout
+
+\begin_layout Plain Layout
+
+        "display": "fullscreen",
+\end_layout
+
+\begin_layout Plain Layout
+
+        "writable": false,
+\end_layout
+
+\begin_layout Plain Layout
+
+        "hardware": {
+\end_layout
+
+\begin_layout Plain Layout
+
+            "mem": 6192,
+\end_layout
+
+\begin_layout Plain Layout
+
+            "cpu": 2
+\end_layout
+
+\begin_layout Plain Layout
+
+        },
+\end_layout
+
+\begin_layout Plain Layout
+
+        "netmode": "NAT",
+\end_layout
+
+\begin_layout Plain Layout
+
+        "allowed-users": ["@mygroup"],
+\end_layout
+
+\begin_layout Plain Layout
+
+        "resolved-names": [
+\end_layout
+
+\begin_layout Plain Layout
+
+            "globalsign.com",
+\end_layout
+
+\begin_layout Plain Layout
+
+            "digicert.com"
+\end_layout
+
+\begin_layout Plain Layout
+
+        ],
+\end_layout
+
+\begin_layout Plain Layout
+
+        "allowed-networks": []
+\end_layout
+
+\begin_layout Plain Layout
+
+    }
+\end_layout
+
+\begin_layout Plain Layout
+
+}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Pour chaque configuration, les champs sont les suivants:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"vm-imagefile"
+\family default
+: chemin absolu vers le fichier contenant l'image disque de la VM;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"descr"
+\family default
+: description de la configuration;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"shared-dir"
+\family default
+: nom du répertoire partagé avec la VM, en tant que sous répertoire du répertoir
+e de l'utilisateur;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"display"
+\family default
+: type d'affichage parmi null (pas d'affichage) 
+\family typewriter
+"
+\family default
+fullscreen
+\family typewriter
+"
+\family default
+, ou 
+\family typewriter
+"
+\family default
+window
+\family typewriter
+";
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"writable"
+\family default
+: indique si les modifications pourront être ré-intégrées à l'image de base
+ de la VM (ce n'est cependant pas automatique);
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"hardware"
+\family default
+: éléments matériels:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\family typewriter
+"mem"
+\family default
+: quantité de mémoire en Mb;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"cpu"
+\family default
+: nombre de VCPU à allouer;
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\family typewriter
+"netmode"
+\family default
+: type d'accès au réseau, 
+\family typewriter
+"NAT"
+\family default
+ ou 
+\family typewriter
+"BRIDGE"
+\family default
+;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"
+\family default
+allowed-users
+\family typewriter
+"
+\family default
+: liste des utilisateurs pouvant utiliser la configuration (liste vide pour
+ autoriser tous les utilisateurs):
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+noms d'utilisateurs individuellement;
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+@<groupe>
+\begin_inset Quotes crd
+\end_inset
+
+ pour tous les utilisateurs d'un groupe;
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\family typewriter
+"resolved-names"
+\family default
+: liste de noms de machines ou de domaines pour lesquels la résolution et
+ la communication depuis la VM est autorisée (pour chaque nom, les résolutions
+ des sous-domaines correspondant sont autorisées)
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+Pour autoriser toute résolution de nom, il suffit de spécifier la chaîne
+ de caractères vide "".
+\end_layout
+
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+"allowed-networks"
+\family default
+: liste de plages d'adresses IP (notation CIDR) vers lesquelles la communication
+ depuis la VM est autorisée (sans besoin de résolution de nom).
+\end_layout
+
+\begin_layout Standard
+
+\bar under
+NB:
+\bar default
+ après chaque changement, le script 
+\family typewriter
+update-security-policy.py
+\family default
+ doit être exécuté (en tant que root) afin que les politiques de sécurité
+ AppArmor et SELinux soient adaptées en fonction.
+\end_layout
+
+\begin_layout Subsection
+Serveur SMB
+\end_layout
+
+\begin_layout Standard
+Ce serveur SMB partage le répertoire désigné par 
+\family typewriter
+"shared-dir"
+\family default
+ dans la configuration via un partage
+\begin_inset Quotes crd
+\end_inset
+
+ nommé 
+\begin_inset Quotes cld
+\end_inset
+
+shared
+\begin_inset Quotes crd
+\end_inset
+
+ en tant qu'utilisateur 
+\begin_inset Quotes cld
+\end_inset
+
+smbshare
+\begin_inset Quotes crd
+\end_inset
+
+ et via le mot de passe 
+\begin_inset Quotes cld
+\end_inset
+
+poorpassword
+\begin_inset Quotes crd
+\end_inset
+
+ (le service n'est accessible que depuis la VM Windows, le mot de passe
+ n'est d'aucune utilité).
+\end_layout
+
+\begin_layout Standard
+Afin de conserver un système de fichiers cohérent pour l'utilisateur dont
+ le répertoire est partagé, le propriétaire et groupe associé à chaque fichier
+ partagé est défini par les variables UID et GID qui contiennent l'ID de
+ l'utilisateur dont la session est ouverte et son groupe.
+\end_layout
+
+\begin_layout Standard
+Ce serveur est implémenté via un conteneur Docker (dont les fichiers nécessaires
+ à la construction sont dans le répertoire 
+\family typewriter
+smb/
+\family default
+).
+\end_layout
+
+\begin_layout Subsection
+Serveur DNS
+\end_layout
+
+\begin_layout Standard
+Le serveur DNS permet un filtrage des accès réseaux autorisés depuis la
+ VM, toutes les résolutions DNS sont systématiquement re-routées vers ce
+ serveur (quel que soit le serveur DNS choisi par la VM Windows).
+\end_layout
+
+\begin_layout Standard
+Pour chaque requête faite par la VM Windows:
+\end_layout
+
+\begin_layout Itemize
+si le nom à résoudre est 
+\begin_inset Quotes cld
+\end_inset
+
+smb.local
+\begin_inset Quotes crd
+\end_inset
+
+, alors l'adresse IP renvoyée est celle du serveur SMB;
+\end_layout
+
+\begin_layout Itemize
+si la résolution est déjà dans le cache interne du serveur, alors la réponse
+ est immédiatement renvoyée à la VM;
+\end_layout
+
+\begin_layout Itemize
+si le nom à résoudre est autorisé, alors:
+\end_layout
+
+\begin_deeper
+\begin_layout Enumerate
+la résolution est faite en faisant appel au serveur récursif configuré sur
+ le système Linux;
+\end_layout
+
+\begin_layout Enumerate
+les règles du firewall Linux sont mises à jour pour autoriser la communication
+ vers la ou les adresses IP résolues (chaque règle est supprimée lorsque
+ le TTL associé à la résolution est atteint);
+\end_layout
+
+\begin_layout Enumerate
+puis le résultat est renvoyé à la VM Windows.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+dans le cas contraire, une trace de la tentative de résolution est conservée
+ dans les logs, puis une erreur est renvoyée à la VM Windows.
+\end_layout
+
+\begin_layout Standard
+Le serveur repose sur un serveur Unbound reposant sur un script python pour
+ mettre en œuvre cette mécanique.
+ Ce serveur est implémenté via un conteneur Docker (dont les fichiers nécessaire
+s à la construction sont dans le répertoire 
+\family typewriter
+unbound/
+\family default
+).
+\end_layout
+
+\begin_layout Standard
+Le serveur DNS réellement utilisé par Unbound est déterminé à partir de
+ la configuration du système hôte (via /etc/resolv.conf ou service DBus du
+ NetworkManager).
+\end_layout
+
+\begin_layout Subsection
+Gestion du cycle de vie de la VM
+\end_layout
+
+\begin_layout Standard
+La gestion du cycle de vie de la VM est assurée par le service 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-virt-system
+\begin_inset Quotes crd
+\end_inset
+
+ exécuté via systemd, et via une API accessible via le bus système de DBUS.
+\end_layout
+
+\begin_layout Standard
+En complément, la connexion à l'IHM via SPICE (avec le programme remote-viewer)
+ est protégée par un mot de passe généré dynamiquement et stocké dans un
+ fichier temporaire, de façon à ce que seul l'utilisateur ayant démarré
+ la VM Windows puisse accéder à son IHM.
+\end_layout
+
+\begin_layout Standard
+Le cycle de vie de chaque VM est le suivant:
+\end_layout
+
+\begin_layout Standard
+\align center
+\begin_inset Graphics
+	filename lifecycle.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Filtrage des communications
+\end_layout
+
+\begin_layout Standard
+Un ensemble de règles de filtrage permet de n'autoriser que les communications
+ nécessaires:
+\end_layout
+
+\begin_layout Itemize
+de manière 
+\begin_inset Quotes cld
+\end_inset
+
+statique
+\begin_inset Quotes crd
+\end_inset
+
+ pour les flux entre la VM Windows, les conteneurs Docker et le système
+ hôte;
+\end_layout
+
+\begin_layout Itemize
+de manière dynamique via ajout et suppression des IPs accessibles depuis
+ la VM Windows en fonction des infos de résolution fournies par le serveur
+ DNS, et notamment suppression en fonction du TTL indiqué par le serveur
+ DNS.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="6">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+From ↓ to →
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Host
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+VM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DNS server
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SMB server
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+External
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Host (host)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+n/a
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+TCP,UDP/68
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+any (TODO: add filtering)
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+VM (vm)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+TCP,UDP/67
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+n/a
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+UDP/53
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+TCP/445
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+filtered by IP/name
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+DNS server (dns)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+n/a
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+to host's DNS servers, UDP/53
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+SMB server (smb)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+n/a
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+External (ext)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+n/a
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Les ports notoires utilisés sont:
+\end_layout
+
+\begin_layout Itemize
+TCP,UDP/67: requêtes DHCP;
+\end_layout
+
+\begin_layout Itemize
+TCP,UDP/68: réponses DHCP;
+\end_layout
+
+\begin_layout Itemize
+UDP/53: requêtes DNS;
+\end_layout
+
+\begin_layout Itemize
+TCP/445: requêtes SMB.
+\end_layout
+
+\begin_layout Section
+Organisation du code source et gestion
+\end_layout
+
+\begin_layout Standard
+L'organisation du code source est la suivante:
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+Makefile
+\family default
+, avec les cibles suivantes:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+
+\family typewriter
+dist
+\family default
+: création de l'archive source (
+\family typewriter
+.tar.gz
+\family default
+);
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+packages
+\family default
+: création de packages pour toutes les distributions Linux supportées (les
+ paquetages créés sont déposés dans 
+\family typewriter
+packages/<DISTRIB>_xxx.{deb,rpm}
+\family default
+;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+clean
+\family default
+: effacement de tous les fichiers de construction.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+
+\family typewriter
+manager/
+\family default
+: code source et ressources de l'ordonnanceur;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+desktop-app/
+\family default
+: code source et ressources de l'application graphique qui permet de démarrer
+ la VM;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+smb/
+\family default
+: recette Docker pour construire le serveur SMB;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+unbound/
+\family default
+: recette Docker pour construire le serveur DNS;
+\end_layout
+
+\begin_layout Itemize
+
+\family typewriter
+packaging/
+\family default
+: ressources pour construire les packages de diverses distributions Linux;
+\end_layout
+
+\begin_layout Section
+Implémentation des règles de filtrage
+\end_layout
+
+\begin_layout Standard
+Les règles de filtrage sont implémentées par la fonction Netfilter du noyau
+ Linux; cependant, suivant le système (les systèmes récents ayant migré
+ vers une utilisation de nftables), elles sont sont mises en place via iptables
+ (version 
+\begin_inset Quotes cld
+\end_inset
+
+legacy
+\begin_inset Quotes crd
+\end_inset
+
+
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Cf.
+ par exemple https://developers.redhat.com/blog/2020/08/18/iptables-the-two-varian
+ts-and-their-relationship-with-nftables.
+\end_layout
+
+\end_inset
+
+) ou nftables.
+ Le choix de l'outil de mise en œuvre est aussi dicté par la version de
+ Docker installée (ce dernier utilisant aussi Netfilter).
+\end_layout
+
+\begin_layout Standard
+La détection de l'outil à utiliser est réalisée de manière automatique.
+\end_layout
+
+\begin_layout Standard
+Dans tous les cas, pour chaque VM, les interfaces réseau (hôte) présentes
+ sont les suivantes:
+\end_layout
+
+\begin_layout Itemize
+une interface Libvirt en mode NAT (correspondant à l'interface réseau de
+ la VM) sur un bridge dédié;
+\end_layout
+
+\begin_layout Itemize
+une interface pour le conteneur Docker SMB dans un réseau Docker dédié;
+\end_layout
+
+\begin_layout Itemize
+une interface pour le conteneur Docker DNS dans un réseau Docker dédié.
+\end_layout
+
+\begin_layout Standard
+NB:
+\end_layout
+
+\begin_layout Itemize
+les réseaux (libvirt ou Docker) sont nommés 
+\begin_inset Quotes cld
+\end_inset
+
+fairshellXY
+\begin_inset Quotes crd
+\end_inset
+
+ (où XY est incrémenté de 1 à chaque fois), le plan d'adressage associé
+ étant 192.168.XY.0/24.
+\end_layout
+
+\begin_layout Itemize
+les noms des interfaces suivent les mêmes règles de nommage, une interface
+ appartenant à un réseau a le même nom que ce réseau.
+\end_layout
+
+\begin_layout Subsection
+Filtrage via iptables
+\end_layout
+
+\begin_layout Standard
+Dans ce contexte, pour chaque VM, les objets spécifiques (hors les objets
+ créés par libvirt ou Docker) suivants sont créés:
+\end_layout
+
+\begin_layout Itemize
+dans la table 
+\begin_inset Quotes cld
+\end_inset
+
+nat
+\begin_inset Quotes crd
+\end_inset
+
+:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+une règle dans la chaîne 
+\begin_inset Quotes cld
+\end_inset
+
+PREROUTING
+\begin_inset Quotes crd
+\end_inset
+
+ pour rediriger le trafic DNS vers le conteneur Docker DNS;
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+dans la table 
+\begin_inset Quotes cld
+\end_inset
+
+filter
+\begin_inset Quotes crd
+\end_inset
+
+:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+des règles dans les chaînes 
+\begin_inset Quotes cld
+\end_inset
+
+INPUT
+\begin_inset Quotes crd
+\end_inset
+
+ et 
+\begin_inset Quotes cld
+\end_inset
+
+OUTPUT
+\begin_inset Quotes crd
+\end_inset
+
+ pour le service DHCP utilisé par la VM;
+\end_layout
+
+\begin_layout Itemize
+des règles dans la chaîne 
+\begin_inset Quotes cld
+\end_inset
+
+FORWARD
+\begin_inset Quotes crd
+\end_inset
+
+ pour contrôler les communications de la VM (notamment en renvoyant à la
+ chaîne nommée 
+\begin_inset Quotes cld
+\end_inset
+
+FAIRSHELL-VM-XY
+\begin_inset Quotes crd
+\end_inset
+
+) et des conteneurs Docker;
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+une chaîne nommée 
+\begin_inset Quotes cld
+\end_inset
+
+FAIRSHELL-VM-XY
+\begin_inset Quotes crd
+\end_inset
+
+ (où XY est incrémenté de 1 à chaque fois) pour filtrer (en mode 
+\begin_inset Quotes cld
+\end_inset
+
+allow list
+\begin_inset Quotes crd
+\end_inset
+
+) les communications entre la VM et le mode externe (la chaîne se terminant
+ par une action 
+\begin_inset Quotes cld
+\end_inset
+
+DROP
+\begin_inset Quotes crd
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Filtrage via nftables
+\end_layout
+
+\begin_layout Standard
+Dans ce contexte, pour chaque VM, les objets spécifiques (hors les objets
+ créés par libvirt ou Docker) suivants sont créés:
+\end_layout
+
+\begin_layout Itemize
+une table IP nommée 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-filter-XY
+\begin_inset Quotes crd
+\end_inset
+
+
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Ce nom est identique au nom la VM dans libvirt (son 
+\begin_inset Quotes cld
+\end_inset
+
+domain name
+\begin_inset Quotes crd
+\end_inset
+
+).
+\end_layout
+
+\end_inset
+
+ (où XY est incrémenté de 1 à chaque fois) qui contient toutes les règles
+ pour la VM;
+\end_layout
+
+\begin_layout Itemize
+dans cette table, les chaînes suivantes:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+vm-dns-nat
+\begin_inset Quotes crd
+\end_inset
+
+ pour rediriger le trafic DNS vers le conteneur Docker DNS;
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+host-input
+\begin_inset Quotes crd
+\end_inset
+
+ et 
+\begin_inset Quotes cld
+\end_inset
+
+host-output
+\begin_inset Quotes crd
+\end_inset
+
+ pour filtrer les communications vers et depuis le système hôte (i.e.
+ autoriser le DHCP pour la VM);
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+smb
+\begin_inset Quotes crd
+\end_inset
+
+ pour autoriser les communications entre la VM et le serveur SMB;
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+dns
+\begin_inset Quotes crd
+\end_inset
+
+ pour autoriser les communications entre la VM et le serveur DNS;
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+vm-ext
+\begin_inset Quotes crd
+\end_inset
+
+ et 
+\begin_inset Quotes cld
+\end_inset
+
+vm-ext-allow
+\begin_inset Quotes crd
+\end_inset
+
+ pour filtrer (
+\begin_inset Quotes cld
+\end_inset
+
+allow list
+\begin_inset Quotes crd
+\end_inset
+
+) les communications de la VM vers l'extérieur.
+\end_layout
+
+\end_deeper
+\begin_layout Section
+Installation de VM
+\end_layout
+
+\begin_layout Subsection
+Installation d'une VM Linux
+\end_layout
+
+\begin_layout Subsection
+Installation de la machine virtuelle (VM) Windows
+\begin_inset CommandInset label
+LatexCommand label
+name "WindowsVM setup"
+
+\end_inset
+
+
+\begin_inset CommandInset label
+LatexCommand label
+name "Windows-install"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Pré-requis
+\end_layout
+
+\begin_layout Standard
+Les pré-requis à la création d'une image disque de Windows sont les suivants:
+\end_layout
+
+\begin_layout Itemize
+une image ISO de Windows 10 (LTCS de préférence)
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Cf.
+ par exemple https://www.microsoft.com/en-us/evalcenter/evaluate-windows-10-enterp
+rise
+\end_layout
+
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Itemize
+les drivers VirtIO, pour de meilleures performances
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+Cf.
+ https://docs.fedoraproject.org/en-US/quick-docs/creating-windows-virtual-machines
+-using-virtio-drivers/index.html
+\end_layout
+
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Itemize
+l'agent invité Spice
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Cf.
+ https://www.spice-space.org/download/windows/spice-guest-tools/spice-guest-tools-
+latest.exe
+\end_layout
+
+\end_inset
+
+;
+\end_layout
+
+\begin_layout Itemize
+installateurs des logiciels requis type Microsoft Office (par ex.
+ installeurs sous forme d'EXE ou de MSI), fichiers de licence, etc..
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Il est possible de télécharger direct depuis le CDN de MS:
+\end_layout
+
+\begin_layout Itemize
+https://community.msguides.com/d/90-office-2016-microsoft-official-download-link-w
+indows-7-sp1-to-10
+\end_layout
+
+\begin_layout Itemize
+https://officecdn.microsoft.com/db/492350F6-3A01-4F97-B9C0-C7C6DDF67D60/media/fr-F
+R/proplusretail.img
+\end_layout
+
+\begin_layout Itemize
+to test: https://heidoc.net/joomla/technology-science/microsoft/67-microsoft-wind
+ows-and-office-iso-download-tool
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+Installation de la VM
+\end_layout
+
+\begin_layout Standard
+L'installation de a VM est réalisé via le programme 
+\family typewriter
+vm-tool.py
+\family default
+ qui doit être exécuté en tant que root via sudo
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+L'utilisateur au nom duquel la VM est exécutée à l'installation est déterminé
+ à partir des variables d'environnement mises en place par sudo, à savoir:
+ SUDO_UID et SUDO_GID.
+\end_layout
+
+\end_inset
+
+ et pour lequel il faut spécifier (cf.
+ aide intégrée au programme):
+\end_layout
+
+\begin_layout Itemize
+le chemin vers l'image disque qui va être créée;
+\end_layout
+
+\begin_layout Itemize
+le chemin vers l'image ISO du système d'exploitation à installer;
+\end_layout
+
+\begin_layout Itemize
+éventuellement des ressources supplémentaires type drivers, sous forme de
+ fichier ISO ou autres
+\begin_inset Foot
+status collapsed
+
+\begin_layout Plain Layout
+Tous les autres fichiers ainsi spécifiés sont copiés dans une image ISO
+ créée lors de l'installation, ils seront donc dans le même 
+\begin_inset Quotes cld
+\end_inset
+
+lecteur logique
+\begin_inset Quotes crd
+\end_inset
+
+ ou même répertoire après que le système ait démarré.
+\end_layout
+
+\end_inset
+
+, via l'option 
+\family typewriter
+--extra
+\family default
+ (à utiliser autant de fois que de ressources à rendre visibles au moment
+ de l'installation).
+\end_layout
+
+\begin_layout Paragraph
+Spécificités Windows
+\end_layout
+
+\begin_layout Standard
+L'installation de Windows nécessite la disponibilité de drivers supplémentaires:
+\end_layout
+
+\begin_layout Itemize
+virtio-win-<version>.iso, à télécharger depuis https://github.com/virtio-win/virti
+o-win-pkg-scripts;
+\end_layout
+
+\begin_layout Itemize
+spice-guest-tools-latest.exe, à télécharger depuis https://www.spice-space.org/down
+load/windows/spice-guest-tools/spice-guest-tools-latest.exe
+\end_layout
+
+\begin_layout Standard
+La commande de démarrage sera par exemple: 
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+sudo ./vm-tool.py install --disk-size 48000 --extra /path/to/virtio-win-0.1.215.iso
+ --extra /path/to/virtio-win-guest-tools.exe /path/to/win10-new-install.img
+ /path/to/Win10_21H2_French_x64.iso
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Après avoir démarré, il est nécessaire, avant même de procéder à l'installation
+ de Windows, de charger les drivers VirtIO:
+\end_layout
+
+\begin_layout Itemize
+suivant la version de Windows, l'IHM proposée peut être différente de celle
+ ci-dessous, il faut cependant sélectionner une installation personnalisée:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename windows-inst0.png
+	width 60col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+charger le pilote VirtIO en cliquant sur le lien 
+\begin_inset Quotes cld
+\end_inset
+
+Charger un pilote
+\begin_inset Quotes crd
+\end_inset
+
+:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename windows-inst1.png
+	width 60col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+sélectionner 
+\begin_inset Quotes cld
+\end_inset
+
+Parcourir
+\begin_inset Quotes crd
+\end_inset
+
+ et depuis le CD 
+\begin_inset Quotes cld
+\end_inset
+
+virtio-win-...
+\begin_inset Quotes crd
+\end_inset
+
+, installer le pilote 
+\begin_inset Quotes cld
+\end_inset
+
+viostor
+\begin_inset Quotes crd
+\end_inset
+
+ qui permet de faire reconnaître le disque virtuel d'installation, (il faut
+ choisir les pilotes 
+\begin_inset Quotes cld
+\end_inset
+
+w10
+\begin_inset Quotes crd
+\end_inset
+
+ et 
+\begin_inset Quotes cld
+\end_inset
+
+amd64
+\begin_inset Quotes crd
+\end_inset
+
+).
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+il semble inutile d'installer les drivers suivants au regard ce ce qu'installe
+ le package spice-guests-tools:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+vioserial
+\begin_inset Quotes crd
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+Balloon
+\begin_inset Quotes crd
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+viorng
+\begin_inset Quotes crd
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+NetKVM
+\begin_inset Quotes crd
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+vioinput
+\begin_inset Quotes crd
+\end_inset
+
+, et
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+qxldod
+\begin_inset Quotes crd
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\bar under
+NB
+\bar default
+: il peut être nécessaire de décocher la case 
+\begin_inset Quotes cld
+\end_inset
+
+Masquer les pilotes non compatibles...
+\begin_inset Quotes crd
+\end_inset
+
+ pour pouvoir sélectionner le driver à installer.
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+cliquer sur 
+\begin_inset Quotes cld
+\end_inset
+
+Suivant
+\begin_inset Quotes crd
+\end_inset
+
+ pour procéder à l'installation de Windows.
+\end_layout
+
+\begin_layout Standard
+L'installation de l'OS Windows lui-même est décrite §
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "Windows-install"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsubsection
+Installation de l'OS
+\end_layout
+
+\begin_layout Standard
+La procédure d'installation de Windows est celle valable pour un PC, avec
+ cependant quelques éléments différenciateurs listés ici:
+\end_layout
+
+\begin_layout Itemize
+l'accès réseau est désactivé durant l'installation pour ne pas créer un
+ compte utilisateur Microsoft mais un compte local:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "45col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Graphics
+	filename windows-inst-nonet.png
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+ 
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "45col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Graphics
+	filename windows-inst-nonet1.png
+	width 100col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+cliquer sur le lien 
+\begin_inset Quotes cld
+\end_inset
+
+Ignorer pour le moment
+\begin_inset Quotes crd
+\end_inset
+
+ ou autre suivant la version de Windows, et ne pas se laisser avoir par
+ l'écran suivant qui insiste lourdement pour disposer d'une connexion Internet;
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+désactiver tout ce qui peut être désactivé en répondant 
+\begin_inset Quotes cld
+\end_inset
+
+Non
+\begin_inset Quotes crd
+\end_inset
+
+ au maximum de questions (Cortana, historique d'activité, géolocalisation,
+ assistance vocale, amélioration de l'écriture manuscrite, données de diagnostic
+, identifiant de publicité, etc.)
+\end_layout
+
+\begin_layout Itemize
+ne choisir que d'envoyer les données de télémétrie basiques;
+\end_layout
+
+\begin_layout Itemize
+le nom de l'utilisateur créé pendant l'installation n'a une importance qu'au
+ niveau esthétique en phase d'ouverture de session, choisir un mot de passe
+ simple et des questions de récupération et réponses associées au hasard;
+\end_layout
+
+\begin_layout Itemize
+ne pas autoriser les autres PC à voir ce PC:
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename windows-inst-nonet2.png
+	width 60col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Subsubsection
+Paramétrage du système
+\end_layout
+
+\begin_layout Standard
+Les étapes suivantes permettent une intégration correcte de Windows avec
+ Linux.
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+À titre informatif, pour une VM Linux (nom d'utilisateur 
+\begin_inset Quotes cld
+\end_inset
+
+vivien
+\begin_inset Quotes crd
+\end_inset
+
+):
+\end_layout
+
+\begin_layout Itemize
+identifier l'ID de la connexion réseau vers Docker avec 
+\begin_inset Quotes cld
+\end_inset
+
+nmcli con show
+\begin_inset Quotes crd
+\end_inset
+
+ (par ex.
+ 0ce47ffc-eb32-3a54-b4ae-de88214d6d13)
+\end_layout
+
+\begin_layout Itemize
+paramétrer la connexion en question:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+sudo nmcli con mod 0ce47ffc-eb32-3a54-b4ae-de88214d6d13 ipv4.addresses 192.168.224.1
+0
+\end_layout
+
+\begin_layout Itemize
+sudo nmcli con mod 0ce47ffc-eb32-3a54-b4ae-de88214d6d13 ipv4.method manual
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+créer /etc/fairshell-smb-creds (600) avec les 3 lignes:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+user=smbshare
+\end_layout
+
+\begin_layout Itemize
+password=poorpassword
+\end_layout
+
+\begin_layout Itemize
+domain=FAIRSHELL
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Ajouter la ligne 
+\begin_inset Quotes cld
+\end_inset
+
+//192.168.224.12/shared /home/vivien/Documents cifs uid=1000,gid=1000,credentials=/
+etc/fairshell-smb-creds,iocharset=utf8,noperm 0 0
+\begin_inset Quotes crd
+\end_inset
+
+ à /etc/fstab
+\end_layout
+
+\begin_layout Itemize
+autologin: ajouter les lignes suivantes à /etc/gdm/custom.conf:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+AutomaticLoginEnable=True
+\end_layout
+
+\begin_layout Itemize
+AutomaticLogin=vivien
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+gsettings set org.gnome.desktop.screensaver lock-enabled false
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Outils invité Spice
+\end_layout
+
+\begin_layout Standard
+Depuis le 
+\begin_inset Quotes cld
+\end_inset
+
+dernier
+\begin_inset Quotes crd
+\end_inset
+
+ CD, installer les outils invités de Spice en exécutant le programme 
+\family typewriter
+spice-guest-tools.exe
+\family default
+ (ou similaire).
+ Ces outils permettent une intégration avancée (redimensionnement de l'écran,
+ etc.)
+\end_layout
+
+\begin_layout Standard
+Il est préférable d'effectuer cette opération avant les autres car l'utilisateur
+ par défaut est administrateur (eh oui...) et car cela permet d'activer le
+ copier/coller entre l'environnement Linux et la VM Windows.
+\end_layout
+
+\begin_layout Paragraph
+Paramétrage des utilisateurs
+\end_layout
+
+\begin_layout Standard
+Il est nécessaire de:
+\end_layout
+
+\begin_layout Itemize
+créer un compte 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-admin
+\begin_inset Quotes crd
+\end_inset
+
+ ayant des privilèges d'administration;
+\end_layout
+
+\begin_layout Itemize
+retirer les droits administrateurs du compte utilisateur créé lors de l'installa
+tion de Windows;
+\end_layout
+
+\begin_layout Itemize
+mettre en place l'auto-login pour l'utilisateur créé lors de l'installation
+ de Windows.
+\end_layout
+
+\begin_layout Standard
+Pour cela, ouvrir un terminal de commande en tant qu'administrateur
+\end_layout
+
+\begin_layout Standard
+\begin_inset Box Frameless
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename windows-admin-cmd.png
+	width 70col%
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+puis générer un mot de passe pour l'administrateur aléatoire complexe via
+ un gestionnaire de mots de passe, puis le conserver, il sera nécessaire
+ pour les étapes de mise à jour ou pour installer/supprimer des logiciels
+ par la suite:
+\end_layout
+
+\begin_layout Itemize
+ajouter un compte 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-admin
+\begin_inset Quotes crd
+\end_inset
+
+:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+net user fairshell-admin <mot de passe administrateur> /add
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+ajouter ce compte au groupe des administrateurs: 
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+net localgroup Administrateurs fairshell-admin /add
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+supprimer l'utilisateur du groupe Administrateurs, en remplaçant 
+\family typewriter
+<username>
+\family default
+ 
+\family typewriter
+par
+\family default
+ le nom de l'utilisateur créé durant l'installation:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+net localgroup Administrateurs <username> /delete
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+mise en place de l'auto login, en remplaçant 
+\family typewriter
+<username>
+\family default
+ et 
+\family typewriter
+<password>
+\family default
+ par le nom de l'utilisateur créé durant l'installation et son mot de passe:
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+https://superuser.com/questions/340396/how-do-i-change-automatic-logon-via-script
+-or-command-line
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+REG ADD "HKLM
+\backslash
+Software
+\backslash
+Microsoft
+\backslash
+Windows NT
+\backslash
+CurrentVersion
+\backslash
+Winlogon" /v AutoAdminLogon /t REG_SZ /d 1 /f
+\end_layout
+
+\begin_layout Plain Layout
+
+REG ADD "HKLM
+\backslash
+Software
+\backslash
+Microsoft
+\backslash
+Windows NT
+\backslash
+CurrentVersion
+\backslash
+Winlogon" /v DefaultUserName /t REG_SZ /d <username> /f
+\end_layout
+
+\begin_layout Plain Layout
+
+REG ADD "HKLM
+\backslash
+Software
+\backslash
+Microsoft
+\backslash
+Windows NT
+\backslash
+CurrentVersion
+\backslash
+Winlogon" /v DefaultPassword /t REG_SZ /d <password> /f
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+redémarrer le système.
+\end_layout
+
+\begin_layout Standard
+
+\bar under
+NB
+\bar default
+: il est possible de lister les attributs d'un compte utilisateur avec la
+ commande 
+\family typewriter
+net user <username>
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+Toutes les actions d'administration devront dorénavant être réalisée via
+ le compte 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-admin
+\begin_inset Quotes crd
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Paragraph
+Paramétrage réseau
+\end_layout
+
+\begin_layout Standard
+Le paramétrage réseau est réalisé automatiquement via DHCP.
+\end_layout
+
+\begin_layout Paragraph
+Paramétrage du partage de fichiers
+\end_layout
+
+\begin_layout Standard
+Le partage de fichiers consiste à monter le répertoire SMB exporté par le
+ serveur SMB présent sur le réseau Docker dans un répertoire réseau (
+\family typewriter
+Z:
+\family default
+ ici), puis à mapper ce répertoire comme répertoire 
+\family typewriter
+Documents
+\family default
+ de l'utilisateur, avant de masquer le répertoire réseau dans l'IHM.
+\end_layout
+
+\begin_layout Standard
+Pour le montage du répertoire partagé:
+\end_layout
+
+\begin_layout Itemize
+ouvrir une ligne de commande (sans privilège administration);
+\end_layout
+
+\begin_layout Itemize
+enregistrement du mot de passe du partage:
+\begin_inset Note Note
+status collapsed
+
+\begin_layout Plain Layout
+https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/cm
+dkey
+\end_layout
+
+\end_inset
+
+
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+cmdkey /add:smb.local /user:smbshare /pass:poorpassword
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+montage du partage:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+net use Z: 
+\backslash
+
+\backslash
+smb.local
+\backslash
+shared /savecred /persistent:yes
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+vérifier que les données partagée par l'utilisateur Linux loggé sont bien
+ présentes dans le partage 
+\family typewriter
+Z:
+\family default
+.
+\end_layout
+
+\begin_layout Standard
+Pour remplacer le répertoire 
+\family typewriter
+Documents
+\family default
+ de l'utilisateur par le partage réseau mappé:
+\end_layout
+
+\begin_layout Itemize
+ouvrir une ligne de commande (sans privilège administration) et supprimer
+ le répertoire 
+\family typewriter
+Documents
+\family default
+: 
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+rmdir /S Documents
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+ouvrir une ligne de commande administrateur (utilisateur 
+\begin_inset Quotes cld
+\end_inset
+
+fairshell-admin
+\begin_inset Quotes crd
+\end_inset
+
+) et créer un lien entre 
+\family typewriter
+Z:
+\family default
+ et le répertoire 
+\family typewriter
+Documents
+\family default
+, en remplaçant 
+\family typewriter
+<username>
+\family default
+ 
+\family typewriter
+par
+\family default
+ le nom de l'utilisateur créé durant l'installation:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+mklink /d C:
+\backslash
+Users
+\backslash
+<username>
+\backslash
+Documents Z:
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_deeper
+\begin_layout Standard
+puis vérifier que le répertoire 
+\family typewriter
+Documents
+\family default
+ de l'utilisateur connecté 
+\begin_inset Quotes cld
+\end_inset
+
+contient
+\begin_inset Quotes crd
+\end_inset
+
+ bien les données partagées attendues.
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+Pour masquer le répertoire réseau, créer la clé de registre adéquate depuis
+ une ligne de commande administrateur:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+REG ADD "HKLM
+\backslash
+Software
+\backslash
+Microsoft
+\backslash
+Windows
+\backslash
+CurrentVersion
+\backslash
+Policies
+\backslash
+Explorer" /v NoDrives /t REG_DWORD /d 33554432 /f
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Paramétrage des services Windows & 
+\shape italic
+Decrapification
+\end_layout
+
+\begin_layout Standard
+Pour Désactiver NetBIOS, depuis une invite de commande administrateur: 
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+sc config netbt start=disabled
+\end_layout
+
+\begin_layout Plain Layout
+
+sc config lmhosts start=disabled
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Supprimer tous les trucs inutiles possibles:
+\end_layout
+
+\begin_layout Itemize
+programmes agrafés dans la barre des tâches;
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes cld
+\end_inset
+
+tiles
+\begin_inset Quotes crd
+\end_inset
+
+ du menu démarrer;
+\end_layout
+
+\begin_layout Itemize
+désinstaller le maximum de programmes via l'IHM (veiller à laisser 
+\begin_inset Quotes cld
+\end_inset
+
+QEMU Guest Tools
+\begin_inset Quotes crd
+\end_inset
+
+ et 
+\begin_inset Quotes cld
+\end_inset
+
+Spice Guest Tools
+\begin_inset Quotes crd
+\end_inset
+
+);
+\end_layout
+
+\begin_layout Itemize
+depuis le panneau de configuration de la confidentialité, désactiver ou
+ interdire le maximum de choses;
+\end_layout
+
+\begin_layout Standard
+Pour la 
+\shape italic
+decrapification
+\shape default
+ finale:
+\end_layout
+
+\begin_layout Itemize
+depuis une invite PowerShell administrateur:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Set-ExecutionPolicy unrestricted
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+télécharger le script depuis 
+\family typewriter
+https://win10.guru/windows-10-decrapifier/
+\family default
+ 
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+Cf.
+ 
+\family typewriter
+https://community.spiceworks.com/scripts/show/4378-windows-10-decrapifier-18xx-19x
+x
+\end_layout
+
+\end_inset
+
+ ou plus récent et le placer dans le répertoire 
+\family typewriter
+Documents
+\family default
+ de l'utilisateur;
+\end_layout
+
+\begin_layout Itemize
+copier ce script ailleurs sur le PC Windows pour que l'administrateur puisse
+ y avoir accès (
+\family typewriter
+C:
+\backslash
+Users
+\backslash
+<username>
+\family default
+ par exemple);
+\end_layout
+
+\begin_layout Itemize
+depuis une invite PowerShell administrateur:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+powershell <chemin vers le script>
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Itemize
+depuis une invite PowerShell administrateur:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Set-ExecutionPolicy restricted
+\end_layout
+
+\begin_layout Plain Layout
+
+del C:
+\backslash
+WindowsDCtranscript.txt
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\bar under
+NB
+\bar default
+: s'il reste des trucs à supprimer, utiliser une ligne de commande PowerShell
+ en tant qu'administrateur:
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Get-AppxPackage *Microsoft.YourPhone* -AllUsers | Remove-AppxPackage -Allusers
+\end_layout
+
+\begin_layout Plain Layout
+
+Get-AppxPackage -allusers Microsoft.549981C3F5F10 | Remove-AppxPackage -Allusers
+ # Cortana
+\end_layout
+
+\begin_layout Plain Layout
+
+Remove-AppxPackage -Allusers Microsoft.WindowsMaps_5.1906.1972.0_x64__8wekyb3d8bbwe
+\end_layout
+
+\begin_layout Plain Layout
+
+Remove-AppxPackage -Allusers Microsoft.GetHelp_10.1706.13331.0_x64__8wekyb3d8bbwe
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Afin de lister tous les composants installés (?) dans un fichier: 
+\begin_inset listings
+lstparams "basicstyle={\scriptsize\ttfamily},breaklines=true"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Get-AppxPackage -allusers > c:
+\backslash
+allpackages.txt
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph
+Finalisation
+\end_layout
+
+\begin_layout Standard
+Avant d'arrêter le système (et de finaliser l'installation), veiller à avoir
+ le dimensionnement de fenêtre qui convient, la taille de la fenêtre qui
+ s'ouvre à chaque démarre de l'environnement Windows étant dépendante de
+ ce paramétrage.
+\end_layout
+
+\begin_layout Standard
+\start_of_appendix
+\begin_inset CommandInset index_print
+LatexCommand printindex
+type "idx"
+name "Index"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document

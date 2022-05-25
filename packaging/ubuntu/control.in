@@ -1,0 +1,11 @@
+Package: fairshell-@appname@
+Version: @version@
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: dbus, python3-dbus, libvirt-clients, python3-libvirt, python3-distro, libvirt-daemon-driver-qemu, libvirt-daemon, qemu-utils, docker.io, virt-viewer (>= 7.0), python3-pyinotify (>= 0.9.6), python3-psutil (>=5.5), python3-netaddr (>= 0.7.19-3), gir1.2-gtk-3.0, firejail
+Installed-Size: 183000
+Maintainer: Vivien Malerba <vmalerba@gmail.com>
+Description: Run an ephemeral desktop Windows VM in the context of a user,
+ while sharing a single common Documents/ directory and filtering the
+ access the VM has to the network.
