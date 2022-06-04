@@ -21,6 +21,8 @@ class ListenEventHandler(pyinotify.ProcessEvent):
     def reconfigure_server(self):
         # recreate forward.conf file
         conf_filename="%s/forward.conf"%self.confdir
+        if os.path.exists(conf_filename):
+            os.remove(conf_filename)
         if self._current_ns:
             config="""server:
   forward-zone:
@@ -33,19 +35,14 @@ class ListenEventHandler(pyinotify.ProcessEvent):
             f.close()
 
         conf_filename="%s/smb.conf"%self.confdir
-        if self._current_ns:
-            config="""server:
-  local-data: "smb.local. IN A %s"
-            """%os.environ["SMBSERVERIP"]
+        config="""server:
+local-data: "smb.local. IN A %s"
+        """%os.environ["SMBSERVERIP"]
 
-            # write file
-            f=open(conf_filename, "w")
-            f.write(config)
-            f.close()
-        else:
-            # no name server configured
-            if os.path.exists(conf_filename):
-                os.remove(conf_filename)
+        # write file
+        f=open(conf_filename, "w")
+        f.write(config)
+        f.close()
 
         # (re)start service
         if self._process:
