@@ -27,6 +27,7 @@ DNS server.
 # Creating packages
 
 The packages are built in the build environments created as Docker images in the `packagers/` sub project.
+The Docker images from https://github.com/VivienMla/fairshell-distros-packagers are required.
 
 Use the `make` command:
 
