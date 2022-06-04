@@ -4,6 +4,10 @@ The VM is "short lived" as it is created on the fly when needed and destroyed af
 to be in a known and clean state). So, any changes made to the VM (being a normal usage or after a sucessful attack) are lost
 when the VM is stopped.
 
+Below is an example of what it can look like with a Windows VM running in its own window (non fullscreen):
+
+![Screenshot](doc/example.png)
+
 The Documents/ folder of the VM is "mapped" to a directory of the Linux host using a dedicated SMB server.
 
 Also, in order to improve security, the outgoing connections are allowed only to some IP ranges and/or named systems (i.e. a connection can only be opened after a sucessful DNS resolution). All the DNS resolutions of the VM are handled by a dedicated
