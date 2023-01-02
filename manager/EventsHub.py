@@ -237,16 +237,18 @@ class InotifyComponent(Component):
     """Component to monitor a set of directories or files.
     You need to:
     * implement the inotify_handler() method which will be called whenever an event is triggered
-    * call add_watch() to monitor directories / files
+    * call watch() to monitor directories / files
     """
     def __init__(self):
         Component.__init__(self)
-        self._wm=pyinotify.WatchManager()
-        self._notifier=pyinotify.Notifier(self._wm, default_proc_fun=self.inotify_handler)
-        GLib.io_add_watch(self._notifier._fd, GLib.IO_IN, self._inotify_process_events, self._notifier)
+        self._wm=None
+        self._notifier=None
+        self._source=None
+        self._watched=[]
 
-    def _inotify_process_events(self, source, condition, notifier):
+    def _inotify_process_events(self, source, condition):
         #print("InoyifyComponent::_inotify_process_events()")
+        notifier=self._notifier
         notifier.read_events()
         notifier.process_events()
         while notifier.check_events(10): # don't lock while waiting
@@ -255,12 +257,25 @@ class InotifyComponent(Component):
         #print("InoyifyComponent:: done")
         return True
 
-    def add_watch(self, path, mask, rec=False, auto_add=False, do_glob=False, quiet=True, exclude_filter=None):
-        return self._wm.add_watch(path, mask, rec, auto_add, do_glob, quiet, exclude_filter)
+    def watch(self, path, mask, rec=False, auto_add=False, do_glob=False, quiet=True, exclude_filter=None):
+        if not self._wm:
+            self._wm=pyinotify.WatchManager()
+            self._notifier=pyinotify.Notifier(self._wm, default_proc_fun=self.inotify_handler)
+            self._source=GLib.io_add_watch(self._notifier._fd, GLib.IO_IN, self._inotify_process_events)
+        self._watched+=[self._wm.add_watch(path, mask, rec, auto_add, do_glob, quiet, exclude_filter)]
 
-    def del_watch(self, watch):
-        for path in watch:
-            self._wm.del_watch(watch[path])
+    def stop(self):
+        if not self._wm:
+            return
+
+        for watch in self._watched:
+            for path in watch:
+                self._wm.del_watch(watch[path])
+        self._watched=[]
+        GLib.source_remove(self._source)
+        self._source=None
+        self._notifier=None
+        self._wm=None
 
     def inotify_handler(self, event):
         raise Exception("inotify_handler() is a pure virtual function")

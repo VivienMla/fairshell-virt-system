@@ -18,7 +18,14 @@
 set -e
 
 [ "$UID" != "0" ] && {
+    # remove user with UID if it exists and is not smbshare
+    uname=$(cat /etc/passwd | grep "x:$UID:" | awk -F : '{print $1}')
+    [ "$uname" != "" ] && [ "$uname" != "smbshare" ] && userdel "$uname"
     usermod -u "$UID" smbshare
+
+    # remove group with GID if it exists and is not smbshare
+    grname=$(cat /etc/group | grep ":$GID:" | awk -F : '{print $1}')
+    [ "$grname" != "" ] && [ "$grname" != "smbshare" ] && groupmod -g 10000 "$grname"
     groupmod -g "$GID" smbshare
 }
 

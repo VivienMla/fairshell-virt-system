@@ -691,9 +691,11 @@ class VM():
                 nft.Rule(vm_dns_nat, ["iif", self._net_virt.interface, "udp", "dport", "53", "counter", "dnat", self._container_dns.ip]),
 
                 nft.Rule(host_input, ["iif", self._net_virt.interface, "udp", "dport", "67", "counter", "accept"]),
+                nft.Rule(host_input, ["iif", self._net_virt.interface, "ct", "state", "related,established", "accept"]),
                 nft.Rule(host_input, ["iif", "{", self._net_virt.interface, ",", self._net_dock_smb.interface, ",", self._net_dock_dns.interface, "}", "counter", "log", "drop"]),
 
                 nft.Rule(host_output, ["oif", self._net_virt.interface, "udp", "dport", "68", "counter", "accept"]),
+                nft.Rule(host_output, ["oif", self._net_virt.interface, "tcp", "dport", "2443", "counter", "accept"]),
                 nft.Rule(host_output, ["oif", "{", self._net_virt.interface, ",", self._net_dock_smb.interface, ",", self._net_dock_dns.interface, "}", "counter", "log", "drop"]),
 
                 nft.Rule(vm_ext, ["iif", self._net_virt.interface, "oif", "!=", "{", self._net_dock_smb.interface, ",", self._net_dock_dns.interface, "}", "jump", "vm-ext-allow"]),

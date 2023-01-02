@@ -73,7 +73,7 @@ class DNSWatcher(evh.InotifyComponent):
             # NetworkManager may not have the /org/freedesktop/NetworkManager/DnsManager object
             self._nm=None
             syslog.syslog(syslog.LOG_INFO, "Using /etc/resolv.conf as DNS source")
-            self.add_watch("/etc/resolv.conf", pyinotify.IN_MOVED_TO | pyinotify.IN_CLOSE_WRITE)
+            self.watch("/etc/resolv.conf", pyinotify.IN_MOVED_TO | pyinotify.IN_CLOSE_WRITE)
 
         # generate initial version of the file
         self._ns_list=["1.1.1.1", "8.8.8.8", "9.9.9.9"]
@@ -238,7 +238,7 @@ class ResolvedIpWatcher(evh.InotifyComponent):
         self._ips=AllowedIPs(allow_table_name, allow_chain_name)
         os.makedirs(dirname, exist_ok=True)
         os.chmod(dirname, 0o777)
-        self._wdd=self.add_watch(dirname, pyinotify.IN_MOVED_TO | pyinotify.IN_CLOSE_WRITE)
+        self.watch(dirname, pyinotify.IN_MOVED_TO | pyinotify.IN_CLOSE_WRITE)
 
         # NB: the existing authorised IPs are ignored as we don't know their associated TTL
         #     and as te risk of being a security risk is low. We can't remove them because
@@ -247,16 +247,15 @@ class ResolvedIpWatcher(evh.InotifyComponent):
 
     def inotify_handler(self, event):
         try:
+            syslog.syslog(syslog.LOG_INFO, "Detected new allowed IP info (file '%s')"%event.pathname)
             data=json.loads(open(event.pathname, "r").read())
             for entry in data: # only use IPV4 for now
                 if entry["A"]:
                     self._ips.add_allowed(entry["A"], entry["TTL"])
+            syslog.syslog(syslog.LOG_INFO, "Removing IP info file '%s'"%event.pathname)
             os.remove(event.pathname)
         except Exception as e:
-            syslog.syslog(syslog.LOG_WARNING, "Error treating '%s': %s"%(event.pathname, str(e)))
-
-    def stop_watch(self):
-        self.del_watch(self._wdd)
+            syslog.syslog(syslog.LOG_WARNING, "Error treating file '%s': %s"%(event.pathname, str(e)))
 
 class ManagedVM(VM.VM):
     """VM.VM object with support for the Manager"""
@@ -268,7 +267,7 @@ class ManagedVM(VM.VM):
         self._stop_job_id=None
         self._commit_job_id=None
         self._ui_config=None
-    
+
     @property
     def id(self):
         return self._id
@@ -650,7 +649,7 @@ class Manager(evh.DBusServer):
             rip=vmo.rip
             if rip:
                 self._hub.unregister(rip)
-                rip.stop_watch()
+                rip.stop()
                 vmo.rip=None
             self.stopping(id, uid, gid)
             args={

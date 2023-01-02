@@ -45,7 +45,6 @@ find /usr/share/fairshell/virt-system -name __pycache__ -type d -exec rm -rf '{}
 #%license add-license-file-here
 
 /etc/dbus-1/system.d/org.fairshell.VMManager.conf
-/etc/fairshell-virt-system.json
 /lib/systemd/system/fairshell-virt-system.service
 /usr/share/fairshell/@appname@/*
 

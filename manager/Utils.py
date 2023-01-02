@@ -150,40 +150,6 @@ def generate_password(length=25, alphabet=None):
         import random
         return ''.join(random.choice(alphabet) for i in range(length))
 
-def get_logged_user_id():
-    """Returns the (uid, gid) of the logged user. If no user is logged, or more than one user is logged
-    then an exception is raised"""
-    # find the ID of the logged user, or the UID of the user running sudo
-    uid=None
-
-    if is_run_as_root():
-        if "SUDO_UID" in os.environ:
-            uid=int(os.environ["SUDO_UID"])
-
-    if uid is None:
-        for filename in os.listdir("/run/user"):
-            luid=None
-            try:
-                luid=int(filename)
-                if luid<1 or luid >2**32 or luid<1000: # invalid or service accounts
-                    luid=None
-            except Exception:
-                pass
-
-            if luid is not None:
-                if uid is None:
-                    uid=luid
-                else:
-                    raise Exception("More than one user is logged")
-    if uid is None:
-        raise Exception("No user logged")
-
-    # get the primary GID of the user and start the job
-    entry=pwd.getpwuid(uid)
-    gid=entry.pw_gid
-
-    return (uid, gid)
-
 def run_viewer(conf_id):
     """Starts the remote viewer and returns the subprocess.Popen of the remote viewer
     """
@@ -352,3 +318,21 @@ def get_root_live_partition(exception_if_no_live=True):
                 raise Exception("Invalid boot partition '%s'"%devfile)
             return devfile
     raise Exception("Internal error: boot partition is not mounted, where is the '%s' file ???"%backend)
+
+def load_all_vm_configurations(configs_dir):
+    """Load all the files in the configs_dir directory and assemble all of them into a single
+    global structure"""
+    configs={}
+    for fname in os.listdir(configs_dir):
+        conf=json.loads(util.load_file_contents(conf_filename))
+        for id in conf:
+            try:
+                if id in configs:
+                    raise Exception("Duplicate configuration ID '%s'"%id)
+                vmconfig=VM.VMConfig(id, conf[id])
+                print("Loaded '%s' configuration"%id)
+                configs[id]=vmconfig
+            except Exception as e:
+                syslog.syslog(syslog.LOG_ERR, "Failed to load configuration '%s': %s"%(id, str(e)))
+                print("Ignored configuration '%s': %s"%(id, str(e)))
+    return configs

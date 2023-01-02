@@ -25,7 +25,7 @@
 
 
 # version
-version=2.0.7
+version=2.0.13
 
 help:
 	@echo "Possible targets: dist, packages, clean"
@@ -35,7 +35,6 @@ appname=virt-system
 srcfiles=Makefile \
 	LICENSE \
 	manager/EventsHub.py \
-	manager/fairshell-virt-system.json \
 	manager/example-fairshell-virt-system.json \
 	manager/fairshell-virt-system.service \
 	manager/org.fairshell.VMManager.conf \
@@ -127,14 +126,13 @@ image-ids.json: fairshell-smb.tar fairshell-unbound.tar
 # this target is called by the packages builders (rpmbuild, dpkg-deb, ...)
 install:
 	# directories
-	for dir in "etc" "lib/systemd/system" "etc/dbus-1/system.d" "usr/share/fairshell/$(appname)" "usr/share/fairshell/$(appname)/icons" "usr/share/fairshell/$(appname)/example-conf" "usr/share/fairshell/$(appname)/docker-images" "usr/share/applications"; do $(INSTALL) -d -m 0755 "$(DESTDIR)/$$dir"; done
+	for dir in "etc" "lib/systemd/system" "etc/fairshell/virt-system.d" "etc/dbus-1/system.d" "usr/share/fairshell/$(appname)" "usr/share/fairshell/$(appname)/icons" "usr/share/fairshell/$(appname)/example-conf" "usr/share/fairshell/$(appname)/docker-images" "usr/share/applications"; do $(INSTALL) -d -m 0755 "$(DESTDIR)/$$dir"; done
 
 	# manager files
 	for file in EventsHub.py VM.py NetworkIptables.py NetworkNftables.py Utils.py; do $(INSTALL) -m 0644 "manager/$$file" "$(DESTDIR)/usr/share/fairshell/$(appname)"; done
 	for file in vm-tool.py vm-manager.py update-security-policy.py; do $(INSTALL) -m 0755 "manager/$$file" "$(DESTDIR)/usr/share/fairshell/$(appname)"; done
 	$(INSTALL) -m 0644 "manager/fairshell-$(appname).service" "$(DESTDIR)/lib/systemd/system"
 	$(INSTALL) -m 0644 "manager/org.fairshell.VMManager.conf" "$(DESTDIR)/etc/dbus-1/system.d"
-	$(INSTALL) -m 0644 "manager/fairshell-virt-system.json" "$(DESTDIR)/etc"
 
 	# Docker images
 	$(INSTALL) -m 0600 fairshell-smb.tar fairshell-unbound.tar "$(DESTDIR)/usr/share/fairshell/$(appname)/docker-images"
