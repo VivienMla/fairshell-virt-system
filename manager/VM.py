@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 - 2022 Vivien Malerba <vmalerba@gmail.com>
+# Copyright 2020 - 2023 Vivien Malerba <vmalerba@gmail.com>
 #
 # This file is part of FAIRSHELL.
 #
@@ -150,7 +150,6 @@ class VMConfig:
                 if p not in ("all", "mass-storage", "smartcard"):
                     raise Exception(f"Invalid VM '{id}', configuration attribute '{key}'")
             self._usb_redir=parts
-        syslog.syslog(syslog.LOG_INFO, "VM CONFIG USB REDIR=%s"%self._usb_redir)
 
         key="allowed-users"
         value=conf_data[key]
