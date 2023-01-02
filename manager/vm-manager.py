@@ -2,7 +2,7 @@
 
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 - 2022 Vivien Malerba <vmalerba@gmail.com>
+# Copyright 2020 - 2023 Vivien Malerba <vmalerba@gmail.com>
 #
 # This file is part of FAIRSHELL.
 #
@@ -312,26 +312,39 @@ class ManagedVM(VM.VM):
         self._ui_config=config
 
 class Manager(evh.DBusServer):
-    """Manages VM defined by their configurations"""
-    def __init__(self, conf_filename, hub):
+    """Manages VM defined by their configurations.
+    Configurations are expected to be defined via '.json' files in /etc/fairshell/virt-system.d
+    """
+    def __init__(self, hub):
         evh.DBusServer.__init__(self, True, "org.fairshell.VMManager", "/remote/virtualmachines")
         self._hub=hub
 
         # define VM objects from config
         self._vms={} # key=config ID, value=list of ManagedVM objects
         self._confs={} # key=config ID, value=VM.VMConfig object
-        conf=json.loads(util.load_file_contents(conf_filename))
-        for id in conf:
-            try:
-                if id.startswith(_install_reserved_id_prefix):
-                    raise Exception("ID '%s' is reserved"%id)
-                config=VM.VMConfig(id, conf[id])
-                print("Loaded '%s' configuration"%id)
-                self._vms[id]=[]
-                self._confs[id]=config
-            except Exception as e:
-                syslog.syslog(syslog.LOG_ERR, "Failed to load configuration '%s': %s"%(id, str(e)))
-                print("Ignored configuration '%s': %s"%(id, str(e)))
+        conf_dir="/etc/fairshell/virt-system.d"
+        confids=[]
+        for fname in os.listdir(conf_dir):
+            if not fname.endswith(".json"):
+                continue
+            fpath="%s/%s"%(conf_dir, fname)
+            confpart=json.loads(util.load_file_contents(fpath))
+            for cid in confpart:
+                try:
+                    if cid.startswith(_install_reserved_id_prefix):
+                        raise Exception("ID '%s' is reserved"%cid)
+                    if cid in confids:
+                        raise Exception("ID '%s' overlapping"%cid)
+                    confids+=[cid]
+
+                    config=VM.VMConfig(cid, confpart[cid])
+                    syslog.syslog(syslog.LOG_INFO, "Loaded configuration '%s' from file '%s'"%(cid, fname))
+                    print("Loaded '%s' configuration"%cid)
+                    self._vms[cid]=[]
+                    self._confs[cid]=config
+                except Exception as e:
+                    syslog.syslog(syslog.LOG_ERR, "Failed to load configuration '%s' in file '%s': %s"%(cid, fname, str(e)))
+                    print("Ignored configuration '%s' in file '%s': %s"%(cid, fname, str(e)))
         self._discarding_all=False
 
         self.run_dir="/run/fairshell-virt-system" # hard coded in the systemd unit file
@@ -840,7 +853,7 @@ try:
         raise Exception("This programm must be run as root")
 
     hub=evh.Hub()
-    manager=Manager("/etc/fairshell-virt-system.json", hub)
+    manager=Manager(hub)
     hub.register(manager)
 
     dns_watcher=DNSWatcher(manager.dns_list_update_cb)

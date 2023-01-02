@@ -370,11 +370,11 @@ name "WindowsVM config"
 \end_layout
 
 \begin_layout Standard
-Ce composant est configuré via le fichier 
+Ce composant est configuré via des fichiers placés dans le répertoire 
 \family typewriter
-/etc/fairshell-virt-system.json
+/etc/fairshell/virt-system.d
 \family default
- qui liste des configurations de VM indexées par un ID, dont le contenu
+ qui décrivent des configurations de VM indexées par un ID, dont le contenu
  au format JSON est par ex.
  (ici une seule configuration dont l'ID est 
 \begin_inset Quotes cld
@@ -808,8 +808,11 @@ unbound/
 
 \begin_layout Standard
 Le serveur DNS réellement utilisé par Unbound est déterminé à partir de
- la configuration du système hôte (via /etc/resolv.conf ou service DBus du
- NetworkManager).
+ la configuration du système hôte (via 
+\family typewriter
+/etc/resolv.conf
+\family default
+ ou service DBus du NetworkManager).
 \end_layout
 
 \begin_layout Subsection

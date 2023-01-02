@@ -2,7 +2,7 @@
 
 # -*- coding: utf-8 -*-
 #
-# Copyright 2020 - 2022 Vivien Malerba <vmalerba@gmail.com>
+# Copyright 2020 - 2023 Vivien Malerba <vmalerba@gmail.com>
 #
 # This file is part of FAIRSHELL.
 #
@@ -66,9 +66,17 @@ try:
 
     config=None # will be None when unstalling the system
     if len(sys.argv)==1:
-        configfile="/etc/fairshell-virt-system.json"
-        if os.path.exists(configfile):
-            config=json.loads(util.load_file_contents(configfile))
+        conf_dir="/etc/fairshell/virt-system.d"
+        config={}
+        for fname in os.listdir(conf_dir):
+            if not fname.endswith(".json"):
+                continue
+            fpath="%s/%s"%(conf_dir, fname)
+            confpart=json.loads(util.load_file_contents(fpath))
+            for cid in confpart:
+                if cid in config:
+                    raise Exception("ID '%s' overlapping"%cid)
+                config[cid]=confpart[cid]
     elif len(sys.argv)==2:
         if sys.argv[1]=="-h" or sys.argv[1]=="--help":
             print("%s [-u]"%sys.argv[0])
