@@ -323,11 +323,20 @@ class Manager(evh.DBusServer):
         self._vms={} # key=config ID, value=list of ManagedVM objects
         self._confs={} # key=config ID, value=VM.VMConfig object
         conf_dir="/etc/fairshell/virt-system.d"
-        confids=[]
-        for fname in os.listdir(conf_dir):
+
+        # list config files
+        conf_files=[]
+        if os.path.isfile("/etc/fairshell-virt-system.json"): # global config file
+            conf_files=["/etc/fairshell-virt-system.json"]
+        for fname in os.listdir(conf_dir): # more granular config files
             if not fname.endswith(".json"):
                 continue
             fpath="%s/%s"%(conf_dir, fname)
+            conf_files+=[fpath]
+
+        # load config files
+        confids=[]
+        for fpath in conf_files:
             confpart=json.loads(util.load_file_contents(fpath))
             for cid in confpart:
                 try:
@@ -338,13 +347,13 @@ class Manager(evh.DBusServer):
                     confids+=[cid]
 
                     config=VM.VMConfig(cid, confpart[cid])
-                    syslog.syslog(syslog.LOG_INFO, "Loaded configuration '%s' from file '%s'"%(cid, fname))
+                    syslog.syslog(syslog.LOG_INFO, "Loaded configuration '%s' from file '%s'"%(cid, fpath))
                     print("Loaded '%s' configuration"%cid)
                     self._vms[cid]=[]
                     self._confs[cid]=config
                 except Exception as e:
-                    syslog.syslog(syslog.LOG_ERR, "Failed to load configuration '%s' in file '%s': %s"%(cid, fname, str(e)))
-                    print("Ignored configuration '%s' in file '%s': %s"%(cid, fname, str(e)))
+                    syslog.syslog(syslog.LOG_ERR, "Failed to load configuration '%s' in file '%s': %s"%(cid, fpath, str(e)))
+                    print("Ignored configuration '%s' in file '%s': %s"%(cid, fpath, str(e)))
         self._discarding_all=False
 
         self.run_dir="/run/fairshell-virt-system" # hard coded in the systemd unit file
